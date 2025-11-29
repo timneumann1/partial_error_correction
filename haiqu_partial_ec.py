@@ -46,36 +46,50 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     scores=np.zeros(num_qubits)
     gates = []
 
+    try:
+        from haiqu_utils import (
+            ALLOWED_BASE_GATES,
+            to_ft_instruction,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            "Could not import 'haiqu_utils'. Make sure the helper package or utils.py "
+            "is available in your environment."
+        ) from exc
+
     for i, layer in enumerate(reversed(layers)): #follow reversed order
         layer_dag=layer['graph']
-        best_node=None
+        best_node_index=-1
         best_score=-np.inf
 
-        for node in layer_dag.op_nodes():
-                if getattr(node.op, "name") in ALLOWED_BASE_GATES:
-                    score_node=len(node.qargs)
-                    for qubit in node.qargs:
-                        score_node += scores[qubit._index]
-                    for qubit in node.qargs:
-                        scores[qubit._index]=score_node
+        for i, node in enumerate(layer_dag.op_nodes()):
+            if getattr(node.op, "name") in ALLOWED_BASE_GATES:
+                score_node=len(node.qargs)
+                for qubit in node.qargs:
+                    score_node += scores[qubit._index]
+                for qubit in node.qargs:
+                    scores[qubit._index]=score_node
 
-                    if score_node>best_score:
-                        best_score=score_node
-                        best_node=node
+                if score_node>best_score:
+                    best_score=score_node
+                    best_node_index=i
                         
-        gates.append(best_node)
+        gates.append(best_node_index)
 
     gates.reverse()
     print(gates)
-    for i, layer in enumerate(layers):
-        if gates[i] is not None:
-            layer_dag=layer['graph']
-            layer_dag.substitute_node(
-                        gates[i],
-                        to_ft_instruction(gates[i].op)
+    for j, layer in enumerate(dag.layers()):
+        layer_dag = layer["graph"]
+        if gates[j]!=-1:
+            for i, node in enumerate(layer_dag.op_nodes()):
+                if getattr(node.op, "name") in ALLOWED_BASE_GATES and i==gates[j]:
+                    layer_dag.substitute_node(
+                        node,
+                        to_ft_instruction(node.op)
                     )
-        
+                    break  # Only one per layer
         new_dag.compose(layer_dag, inplace=True)
+        
         
     # 3) Convert back to a QuantumCircuit
     transformed = dag_to_circuit(new_dag)

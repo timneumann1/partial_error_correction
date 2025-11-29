@@ -23,8 +23,8 @@ class TestCircuits:
         self.noisy_sim = AerSimulator(noise_model=self.noise_model)    
     
     def get_random_circuits(self, n_circuits):
-        random_qubits = np.random.randint(2, 3, size=n_circuits)
-        random_depths = np.random.randint(2, 3, size=n_circuits)
+        random_qubits = np.random.randint(3, 5, size=n_circuits)
+        random_depths = np.random.randint(3, 6, size=n_circuits)
         random_circuits = [
         transpile(
             random_circuit(num_qubits=nq, depth=nd, max_operands=2, seed=seed, measure=True),

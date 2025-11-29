@@ -44,6 +44,7 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     layers=list(dag.layers())
     num_qubits=dag.num_qubits()
     scores=np.zeros(num_qubits)
+    gates = []
 
     for i, layer in enumerate(reversed(layers)): #follow reversed order
         layer_dag=layer['graph']
@@ -61,11 +62,17 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
                     if score_node>best_score:
                         best_score=score_node
                         best_node=node
+                        
+        gates.append(best_node)
 
-        if best_node is not None:
+    gates.reverse()
+    print(gates)
+    for i, layer in enumerate(layers):
+        if gates[i] is not None:
+            layer_dag=layer['graph']
             layer_dag.substitute_node(
-                        best_node,
-                        to_ft_instruction(best_node.op)
+                        gates[i],
+                        to_ft_instruction(gates[i].op)
                     )
         
         new_dag.compose(layer_dag, inplace=True)
@@ -85,7 +92,7 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'qft' # 'random' or 'qft'
+    test_circuit_type = 'random' # 'random' or 'qft'
     n_circuits = 5 # number of test circuits
 
     noise_model = build_noise_model(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)

@@ -96,7 +96,7 @@ if __name__ == '__main__':
     elif test_circuit_type == 'random':
         benchmarking_circuits = benchmarking.get_random_circuits(n_circuits)
     elif test_circuit_type == 'qpe':
-        benchmarking_circuits = benchmarking.get_qpe_circuits(n_circuits=1)
+        benchmarking_circuits = benchmarking.get_qpe_circuits(n_circuits)
     
     viz_circuit = benchmarking_circuits[0]
     viz_circuit_ft = transform_circuit(viz_circuit)

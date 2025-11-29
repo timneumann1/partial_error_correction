@@ -96,6 +96,8 @@ if __name__ == '__main__':
 
     fig = benchmarking_circuits[0].draw(output="mpl")
     fig.savefig("circuit.png", dpi=300, bbox_inches="tight")
+    fig = transform_circuit(benchmarking_circuits[0]).draw(output="mpl")
+    fig.savefig("circuit_ft.png", dpi=300, bbox_inches="tight")
 
     print("Running grader...")
 

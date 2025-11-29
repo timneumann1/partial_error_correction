@@ -40,7 +40,7 @@ class circuits:
             qc.compose(QFT(num_qubits=nq), inplace=True)
             return qc
             
-        random_qubits = np.random.randint(7, 11, size=5)
+        random_qubits = np.random.randint(3, 7, size=5)
 
         qft_circuits = [
         transpile(

@@ -107,3 +107,62 @@ def compute_discounted_lightcone_scores_bitset(dag, H=8, gamma=0.8, alpha=1.0, b
         score_table[node._node_id] = float(score)
 
     return score_table
+
+
+def compute_future_reachability(dag):
+    """
+    Compute per-gate 'future qubit influence' by propagating reachable qubits
+    backward through layer structure.
+
+    For each gate:
+        score = number of qubits that can be affected in the future
+                starting from this gate.
+    
+    """
+
+    layers = list(dag.layers())
+    num_layers = len(layers)
+
+    # influence[layer][node_id] = set of qubits reachable from this gate forward
+    influence = [{} for _ in range(num_layers)]
+
+    # Initialize score table
+    score_table = {}
+
+    # --- Initialize final layer ---
+    last = num_layers - 1
+    for node in layers[last]["graph"].op_nodes():
+        qs = set(node.qargs)
+        influence[last][node] = set(qs)      # gate only influences its own qubits
+        score_table[node._node_id] = len(influence[last][node])
+
+    # --- Backward propagation ---
+    for i in reversed(range(num_layers - 1)):
+        next_layer = layers[i+1]["graph"].op_nodes()
+        current_nodes = layers[i]["graph"].op_nodes()
+
+        # Precompute qubit → union of influence of all next-layer gates that touch it
+        qubit_to_future = {}
+
+        for node_next in next_layer:
+            infl = influence[i+1][node_next]    # set of future qubits for next-layer gate
+            for q in node_next.qargs:
+                if q not in qubit_to_future:
+                    qubit_to_future[q] = set()
+                qubit_to_future[q] |= infl
+
+        # Now compute influence for nodes in current layer
+        for node in current_nodes:
+            qs = node.qargs
+            union_set = set(qs)
+
+            # For each qubit the gate touches, add the future influence coming from next layer
+            for q in qs:
+                if q in qubit_to_future:
+                    union_set |= qubit_to_future[q]
+
+            influence[i][node] = union_set
+            score_table[node._node_id] = len(influence[i][node])
+
+
+    return score_table

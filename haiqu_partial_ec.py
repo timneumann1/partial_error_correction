@@ -39,42 +39,45 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     in their own transform_circuit, but it must obey the same rules.
     """
     dag = circuit_to_dag(circ)
-    new_dag = dag.copy_empty_like()
+    new_dag = dag.copy_empty_like()   
 
-    # Compute scores ONCE for entire DAG
-    scores = compute_discounted_lightcone_scores_bitset(
-        dag, 
-        H=8,        # horizon
-        gamma=0.8,  # discount factor
-        alpha=1.0,  
-        beta=0.5
-    )
-    # 1) Decide which nodes to mark as FT: at most one per layer
-    for layer in dag.layers():
-        layer_dag = layer["graph"]
-        best_node = None
-        best_score = -float("inf")
+    layers=list(dag.layers())
+    num_qubits=dag.num_qubits()
+    scores=np.zeros(num_qubits)
+
+    for i, layer in enumerate(reversed(layers)): #follow reversed order
+        layer_dag=layer['graph']
+        best_node=None
+        best_score=-np.inf
+
         for node in layer_dag.op_nodes():
-            if getattr(node.op, "name") in ALLOWED_BASE_GATES:
-                s = scores.get(node._node_id, 0.0)
-                if s > best_score:
-                    best_score = s
-                    best_node = node
+                if getattr(node.op, "name") in ALLOWED_BASE_GATES:
+                    score_node=len(node.qargs)
+                    for qubit in node.qargs:
+                        score_node += scores[qubit._index]
+                    for qubit in node.qargs:
+                        scores[qubit._index]=score_node
 
-        # If a winner exists, replace it with FT instruction
-        if best_node is not None:            
+                    if score_node>best_score:
+                        best_score=score_node
+                        best_node=node
+
+        if best_node is not None:
             layer_dag.substitute_node(
-                best_node,
-                to_ft_instruction(best_node.op)
-            )
-                
+                        best_node,
+                        to_ft_instruction(best_node.op)
+                    )
+        
         new_dag.compose(layer_dag, inplace=True)
-   
+        
     # 3) Convert back to a QuantumCircuit
     transformed = dag_to_circuit(new_dag)
     transformed.name = circ.name + "_ft"
     return transformed
 
+
+
+                
 
 if __name__ == '__main__':
 
@@ -82,7 +85,7 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'qpe' # 'random' or 'qft'
+    test_circuit_type = 'qft' # 'random' or 'qft'
     n_circuits = 5 # number of test circuits
 
     noise_model = build_noise_model(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)
@@ -110,13 +113,13 @@ if __name__ == '__main__':
     viz_ft_result = noisy_sim.run(transpile(viz_circuit_ft, noisy_sim, optimization_level=0), shots=10000).result().get_counts()
     fig2 = viz_circuit_ft.draw(output="mpl")
     fig2.savefig("circuit_ft.png", dpi=300, bbox_inches="tight")
-    
+
     fig3 = plot_histogram([viz_ideal_result, viz_ft_result],
                legend=["Original", "FT Transformed"],
                title="Ideal Simulation Results")
     
     fig3.savefig("histogram.png", dpi=300, bbox_inches="tight")
-    
+
     print("Running grader...")
 
     grade = grader(

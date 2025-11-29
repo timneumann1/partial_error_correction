@@ -5,6 +5,8 @@ from haiqu_utils import build_noise_model
 from qiskit_aer import AerSimulator
 from qiskit.circuit.library import QFT
 from qiskit import QuantumCircuit
+from qiskit.circuit.library import UnitaryGate, QFT, PhaseEstimation
+
 
 np.random.seed(42)
 
@@ -54,4 +56,92 @@ class TestCircuits:
         
         return qft_circuits
     
-    
+    def get_qpe_circuits(self, n_circuits):
+            
+        def QPE(estimation_wires, target_wires):
+
+            # Helper functions for Quantum Phase Estimation (QPE) circuit
+            def U_power_2k(unitary, k):
+                """Computes U at a power of 2^k (U^(2^k))"""
+                return np.linalg.matrix_power(unitary, 2**k)
+
+            def apply_controlled_powers_of_U(unitary, estimation_wires, target_wires):
+                """
+                Applies controlled-U^(2^k) gates on the target wires, controlled by estimation wires.
+                """
+                qc = QuantumCircuit(len(estimation_wires) + len(target_wires))
+
+                t = len(estimation_wires)
+                for i in range(t):
+                    k = t - 1 - i  # same indexing as your Pennylane code
+                    U_k = U_power_2k(unitary, k)
+
+                    # Wrap U_k as a UnitaryGate
+                    U_gate = UnitaryGate(U_k, label=f"U^{2**k}")
+
+                    # Add controlled version
+                    controlled_gate = U_gate.control(1)
+
+                    qc.append(controlled_gate, [estimation_wires[i]] + target_wires)
+
+                return qc
+
+            # Prepare eigenstate |1> for the unitary gate T on the target qubit 
+            def prepare_eigenvector(qc, target_wires):
+                qc.x(target_wires[0])  # same as qml.PauliX
+
+            # Compute U^(2^k)
+            def U_power_2k(unitary, k):
+                return np.linalg.matrix_power(unitary, 2**k)
+
+            # Apply controlled powers of U
+            def apply_controlled_powers_of_U(qc, unitary, estimation_wires, target_wires):
+                t = len(estimation_wires)
+                for i in range(t):
+                    k = t - 1 - i
+                    U_k = U_power_2k(unitary, k)
+                    U_gate = UnitaryGate(U_k)
+                    controlled_gate = U_gate.control(1)
+                    qc.append(controlled_gate, [estimation_wires[i]] + target_wires)
+
+            # Main Quantum Phase estimation (QPE) circuit
+            def qpe(unitary, estimation_wires, target_wires):
+                n_total = len(estimation_wires) + len(target_wires)
+                qc = QuantumCircuit(n_total, len(estimation_wires))
+                
+                # Prepare eigenstate
+                prepare_eigenvector(qc, target_wires)
+                
+                # Apply Hadamards to estimation qubits
+                for i in estimation_wires:
+                    qc.h(i)
+                
+                # Apply controlled powers of U
+                apply_controlled_powers_of_U(qc, unitary, estimation_wires, target_wires)
+                
+                # Apply inverse QFT
+                qc.append(QFT(len(estimation_wires), inverse=True, do_swaps=False), estimation_wires)
+                
+                # Measure estimation qubits
+                for i, wire in enumerate(estimation_wires):
+                    qc.measure(wire, i)
+                
+                return qc
+
+            # Quantum Phase Estimation (QPE) circuit for T operator
+            T = np.array([[1, 0],
+                        [0, np.exp(1j*np.pi/4)]]) 
+        
+            return qpe(T, estimation_wires, target_wires)
+        
+        estimation_wires = np.random.randint(4, 8, size=n_circuits)
+        qpe_circuits = [
+        transpile(
+            QPE(range(est_wires), [est_wires]),
+            self.noisy_sim,
+            optimization_level=0,
+        )
+        for est_wires in estimation_wires
+        ]
+        
+        return qpe_circuits

@@ -5,6 +5,8 @@ from qiskit_aer import AerSimulator
 from qiskit.converters import circuit_to_dag, dag_to_circuit
 from qiskit.quantum_info import hellinger_fidelity
 from qiskit.visualization import plot_histogram
+from qiskit.compiler import transpile
+
 from haiqu_utils import (
         ALLOWED_BASE_GATES,
         to_ft_instruction,
@@ -80,7 +82,7 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'random' # 'random' or 'qft'
+    test_circuit_type = 'qpe' # 'random' or 'qft'
     n_circuits = 5 # number of test circuits
 
     noise_model = build_noise_model(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)
@@ -93,12 +95,28 @@ if __name__ == '__main__':
         benchmarking_circuits = benchmarking.get_qft_circuits(n_circuits)
     elif test_circuit_type == 'random':
         benchmarking_circuits = benchmarking.get_random_circuits(n_circuits)
-
-    fig = benchmarking_circuits[0].draw(output="mpl")
+    elif test_circuit_type == 'qpe':
+        benchmarking_circuits = benchmarking.get_qpe_circuits(n_circuits=1)
+    
+    viz_circuit = benchmarking_circuits[0]
+    viz_circuit_ft = transform_circuit(viz_circuit)
+    viz_circuit.measure_all()
+    viz_ideal_result = ideal_sim.run(viz_circuit, shots=10000).result().get_counts()
+    
+    fig = viz_circuit.draw(output="mpl")
     fig.savefig("circuit.png", dpi=300, bbox_inches="tight")
-    fig = transform_circuit(benchmarking_circuits[0]).draw(output="mpl")
-    fig.savefig("circuit_ft.png", dpi=300, bbox_inches="tight")
-
+    
+    viz_circuit_ft.measure_all()
+    viz_ft_result = noisy_sim.run(transpile(viz_circuit_ft, noisy_sim, optimization_level=0), shots=10000).result().get_counts()
+    fig2 = viz_circuit_ft.draw(output="mpl")
+    fig2.savefig("circuit_ft.png", dpi=300, bbox_inches="tight")
+    
+    fig3 = plot_histogram([viz_ideal_result, viz_ft_result],
+               legend=["Original", "FT Transformed"],
+               title="Ideal Simulation Results")
+    
+    fig3.savefig("histogram.png", dpi=300, bbox_inches="tight")
+    
     print("Running grader...")
 
     grade = grader(

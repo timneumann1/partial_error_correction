@@ -13,6 +13,7 @@ from haiqu_utils import build_noise_model
 from haiqu_utils import grader
 
 from circuits import TestCircuits
+from gate_score_assignment import compute_discounted_lightcone_scores_bitset
 
 
 def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
@@ -38,16 +39,33 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     dag = circuit_to_dag(circ)
     new_dag = dag.copy_empty_like()
 
+    # Compute scores ONCE for entire DAG
+    scores = compute_discounted_lightcone_scores_bitset(
+        dag, 
+        H=8,        # horizon
+        gamma=0.8,  # discount factor
+        alpha=1.0,  
+        beta=0.5
+    )
     # 1) Decide which nodes to mark as FT: at most one per layer
     for layer in dag.layers():
         layer_dag = layer["graph"]
+        best_node = None
+        best_score = -float("inf")
         for node in layer_dag.op_nodes():
             if getattr(node.op, "name") in ALLOWED_BASE_GATES:
-                layer_dag.substitute_node(
-                    node,
-                    to_ft_instruction(node.op)
-                )
-                break  # Only one per layer
+                s = scores.get(node._node_id, 0.0)
+                if s > best_score:
+                    best_score = s
+                    best_node = node
+
+        # If a winner exists, replace it with FT instruction
+        if best_node is not None:            
+            layer_dag.substitute_node(
+                node,
+                to_ft_instruction(node.op)
+            )
+                
         new_dag.compose(layer_dag, inplace=True)
    
     # 3) Convert back to a QuantumCircuit
@@ -62,6 +80,8 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
+    test_circuit_type = 'random' # 'random' or 'qft'
+    n_circuits = 5 # number of test circuits
 
     noise_model = build_noise_model(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)
 
@@ -69,7 +89,11 @@ if __name__ == '__main__':
     noisy_sim = AerSimulator(noise_model=noise_model)
 
     benchmarking = TestCircuits(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)
-    benchmarking_circuits = benchmarking.get_qft_circuits(n_circuits=5)
+    if test_circuit_type == 'qft':
+        benchmarking_circuits = benchmarking.get_qft_circuits(n_circuits)
+    elif test_circuit_type == 'random':
+        benchmarking_circuits = benchmarking.get_random_circuits(n_circuits)
+
     fig = benchmarking_circuits[0].draw(output="mpl")
     fig.savefig("circuit.png", dpi=300, bbox_inches="tight")
 

@@ -62,8 +62,8 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
         # If a winner exists, replace it with FT instruction
         if best_node is not None:            
             layer_dag.substitute_node(
-                node,
-                to_ft_instruction(node.op)
+                best_node,
+                to_ft_instruction(best_node.op)
             )
                 
         new_dag.compose(layer_dag, inplace=True)

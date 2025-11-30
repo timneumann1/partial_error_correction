@@ -69,6 +69,7 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     gates.reverse()
     for j, layer in enumerate(dag.layers()):
         layer_dag = layer["graph"]
+
         if gates[j]!=-1:            
             for i, node in enumerate(layer_dag.op_nodes()):
                 if getattr(node.op, "name") in ALLOWED_BASE_GATES and i==gates[j]:
@@ -179,7 +180,7 @@ if __name__ == '__main__':
 
     fig3 = plot_histogram([viz_ideal_f, viz_ft_f, viz_ft_f_base],
                legend=["Original", "Lookahead", "Transformation Baseline"],
-               title="Comparison of Partial QEC with Ideal Simulation Results")
+               title="Comparison of Partial QEC with Ideal Simulation Results", bar_labels = False)
     
     fig3.savefig("histogram.png", dpi=300)
       

@@ -15,8 +15,6 @@ from haiqu_utils import build_noise_model
 from haiqu_utils import grader
 
 from circuits import TestCircuits
-from gate_score_assignment import compute_discounted_lightcone_scores_bitset
-
 
 def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     """
@@ -52,7 +50,7 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
         current_scores = scores.copy()
         for j, node in enumerate(layer_dag.op_nodes()):
             if getattr(node.op, "name") in ALLOWED_BASE_GATES:
-                score_node = 2.5*len(node.qargs)
+                score_node = len(node.qargs)
                 for qubit in node.qargs:
                     score_node += scores[qubit._index]
                 for qubit in node.qargs:
@@ -141,7 +139,7 @@ if __name__ == '__main__':
     ft_scale = 0.1 # ideal FT gates
     test_circuit_type = 'qpe' # 'random', 'qft' or 'qft'
     n_circuits = 10 # number of test circuits
-    n_qubits = 12
+    n_qubits = None
 
     ################################################
     # 1. Initialize noise model and simulator      #

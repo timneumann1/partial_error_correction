@@ -46,25 +46,14 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     scores=np.zeros(num_qubits)
     gates = []
 
-    try:
-        from haiqu_utils import (
-            ALLOWED_BASE_GATES,
-            to_ft_instruction,
-        )
-    except ImportError as exc:
-        raise ImportError(
-            "Could not import 'haiqu_utils'. Make sure the helper package or utils.py "
-            "is available in your environment."
-        ) from exc
-
     for i, layer in enumerate(reversed(layers)): #follow reversed order
         layer_dag=layer['graph']
         best_node_index=-1
-        best_score=-np.inf
-
+        best_score=-1
+        current_scores = scores.copy()
         for i, node in enumerate(layer_dag.op_nodes()):
             if getattr(node.op, "name") in ALLOWED_BASE_GATES:
-                score_node=len(node.qargs)
+                score_node= 2.5*len(node.qargs)
                 for qubit in node.qargs:
                     score_node += scores[qubit._index]
                 for qubit in node.qargs:
@@ -72,15 +61,16 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
 
                 if score_node>best_score:
                     best_score=score_node
-                    best_node_index=i
-                        
+                    best_node_index=i       
         gates.append(best_node_index)
+        
+        scores -= 2/3*current_scores
+        #print(f"New scores reduced:{scores}")          
 
     gates.reverse()
-    print(gates)
     for j, layer in enumerate(dag.layers()):
         layer_dag = layer["graph"]
-        if gates[j]!=-1:
+        if gates[j]!=-1:            
             for i, node in enumerate(layer_dag.op_nodes()):
                 if getattr(node.op, "name") in ALLOWED_BASE_GATES and i==gates[j]:
                     layer_dag.substitute_node(
@@ -97,7 +87,45 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     return transformed
 
 
+def baseline_transform(circ: QuantumCircuit) -> QuantumCircuit:
+    """
+    Baseline transformation pass that:
 
+      - Preserves the circuit structure (same ops, same order, same wires),
+      - Selects at most one gate per DAG layer to mark as FT,
+      - Replaces only those gates by FT-labelled versions via to_ft_instruction.
+
+    Implementation strategy:
+      1. Build DAG from the original circuit.
+      2. Build a mapping from node_id -> original DAG node.
+      3. Iterate over DAG layers and, per layer, pick at most one candidate node
+         whose op.name is in ALLOWED_BASE_GATES.
+      4. For each chosen node_id, look up the original node and replace node.op
+         with the FT version.
+      5. Convert the modified DAG back to a QuantumCircuit.
+
+    This is a simple baseline; participants should implement a better strategy
+    in their own transform_circuit, but it must obey the same rules.
+    """
+    dag = circuit_to_dag(circ)
+    new_dag = dag.copy_empty_like()
+
+    # 1) Decide which nodes to mark as FT: at most one per layer
+    for layer in dag.layers():
+        layer_dag = layer["graph"]
+        for node in layer_dag.op_nodes():
+            if getattr(node.op, "name") in ALLOWED_BASE_GATES:
+                layer_dag.substitute_node(
+                    node,
+                    to_ft_instruction(node.op)
+                )
+                break  # Only one per layer
+        new_dag.compose(layer_dag, inplace=True)
+   
+    # 3) Convert back to a QuantumCircuit
+    transformed = dag_to_circuit(new_dag)
+    transformed.name = circ.name + "_ft"
+    return transformed
                 
 
 if __name__ == '__main__':
@@ -106,8 +134,8 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'random' # 'random' or 'qft'
-    n_circuits = 5 # number of test circuits
+    test_circuit_type = 'qpe' # 'random', 'qft' or 'qft'
+    n_circuits = 10 # number of test circuits
 
     noise_model = build_noise_model(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)
 
@@ -123,10 +151,12 @@ if __name__ == '__main__':
         benchmarking_circuits = benchmarking.get_qpe_circuits(n_circuits)
     
     viz_circuit = benchmarking_circuits[0]
+    
     viz_circuit_ft = transform_circuit(viz_circuit)
+    viz_circuit_ft_baseline = baseline_transform((viz_circuit))
+    
     viz_circuit.measure_all()
     viz_ideal_result = ideal_sim.run(viz_circuit, shots=10000).result().get_counts()
-    
     fig = viz_circuit.draw(output="mpl")
     fig.savefig("circuit.png", dpi=300, bbox_inches="tight")
     
@@ -134,14 +164,47 @@ if __name__ == '__main__':
     viz_ft_result = noisy_sim.run(transpile(viz_circuit_ft, noisy_sim, optimization_level=0), shots=10000).result().get_counts()
     fig2 = viz_circuit_ft.draw(output="mpl")
     fig2.savefig("circuit_ft.png", dpi=300, bbox_inches="tight")
-
-    fig3 = plot_histogram([viz_ideal_result, viz_ft_result],
-               legend=["Original", "FT Transformed"],
-               title="Ideal Simulation Results")
     
-    fig3.savefig("histogram.png", dpi=300, bbox_inches="tight")
+    viz_circuit_ft_baseline.measure_all()
+    viz_ft_baseline_result = noisy_sim.run(transpile(viz_circuit_ft_baseline, noisy_sim, optimization_level=0), shots=10000).result().get_counts()
+    fig3 = viz_circuit_ft_baseline.draw(output="mpl")
+    fig3.savefig("circuit_ft_baseline.png", dpi=300, bbox_inches="tight")
+    
+    def filter_counts(counts, threshold):
+        return {k: v for k, v in counts.items() if v >= threshold}
+    
+    THRESH = 200  # keep only bitstrings with >= 300 counts
+    viz_ideal_f = filter_counts(viz_ideal_result, THRESH)
+    viz_ft_f = filter_counts(viz_ft_result, THRESH)
+    viz_ft_f_base = filter_counts(viz_ft_baseline_result, THRESH)
 
-    print("Running grader...")
+    fig3 = plot_histogram([viz_ideal_f, viz_ft_f, viz_ft_f_base],
+               legend=["Original", "Transformed", "Transformation Baseline"],
+               title="Comparison of Partial QEC with Ideal Simulation Results")
+    
+    fig3.savefig("histogram.png", dpi=300)
+      
+    print("Running grader for baseline transform...")
+
+    grade = grader(
+        transform_circuit_fn=baseline_transform,
+        circuits=benchmarking_circuits,
+        noise_model=noise_model,
+        shots=200_000,   # reduce for demo speed
+    )
+
+    print("Valid submission?      :", grade["ok"])
+    print("Average improvement    :", grade["average_improvement"])
+    print("Per-circuit improvement:", grade["improvements"])
+    print("Plain fidelities       :", grade["fidelities_plain"])
+    print("FT fidelities          :", grade["fidelities_ft"])
+
+    if not grade["ok"]:
+        print("\nErrors:")
+        for err in grade["errors"]:
+            print("  -", err)
+            
+    print("Running grader for circuit transform...")
 
     grade = grader(
         transform_circuit_fn=transform_circuit,
@@ -149,7 +212,6 @@ if __name__ == '__main__':
         noise_model=noise_model,
         shots=200_000,   # reduce for demo speed
     )
-
     print("Valid submission?      :", grade["ok"])
     print("Average improvement    :", grade["average_improvement"])
     print("Per-circuit improvement:", grade["improvements"])

@@ -13,6 +13,7 @@ np.random.seed(42)
 class TestCircuits:
     
     def __init__(self, p_1q=1e-2, p_2q=5e-2, ft_scale=0.1):
+
         self.p_1q = p_1q            # depolarizing error for 1-qubit native gates
         self.p_2q = p_2q            # depolarizing error for 2-qubit native gates
         self.ft_scale = ft_scale    # ideal FT gates
@@ -23,14 +24,15 @@ class TestCircuits:
         self.noisy_sim = AerSimulator(noise_model=self.noise_model)    
     
     def get_random_circuits(self, n_circuits, n_qubits=None, depth=None):
+
         if n_qubits==None:
             random_qubits = np.random.randint(3, 7, size=n_circuits)
         else:
-            random_qubits=n_qubits
+            random_qubits = [n_qubits]
         if depth==None:
             random_depths = np.random.randint(3, 10, size=n_circuits)
         else:
-            random_depths=depth 
+            random_depths = [depth] 
             
         random_circuits = [
         transpile(

@@ -25,11 +25,11 @@ class TestCircuits:
     
     def get_random_circuits(self, n_circuits, n_qubits=None, depth=None):
 
-        if n_qubits==None:
+        if n_qubits is None:
             random_qubits = np.random.randint(3, 7, size=n_circuits)
         else:
             random_qubits = [n_qubits]
-        if depth==None:
+        if depth is None:
             random_depths = np.random.randint(3, 10, size=n_circuits)
         else:
             random_depths = [depth] 
@@ -44,15 +44,18 @@ class TestCircuits:
         ]
         return random_circuits 
     
-    def get_qft_circuits(self, n_circuits):
+    def get_qft_circuits(self, n_circuits, n_qubits=None):
         
         def qft(nq):
             qc = QuantumCircuit(nq)
             qc.h(range(nq))
             qc.compose(QFT(num_qubits=nq), inplace=True)
             return qc
-            
-        random_qubits = np.random.randint(3, 7, size=n_circuits)
+
+        if n_qubits is None:    
+            random_qubits = np.random.randint(3, 7, size=n_circuits)
+        else:
+            random_qubits = [n_qubits]
 
         qft_circuits = [
         transpile(
@@ -65,7 +68,7 @@ class TestCircuits:
         
         return qft_circuits
     
-    def get_qpe_circuits(self, n_circuits):
+    def get_qpe_circuits(self, n_circuits, n_qubits=None):
             
         def QPE(estimation_wires, target_wires):
 
@@ -143,7 +146,10 @@ class TestCircuits:
         
             return qpe(Z, estimation_wires, target_wires)
         
-        estimation_wires = np.random.randint(3, 5, size=n_circuits)
+        if n_qubits is None:
+            estimation_wires = np.random.randint(3, 5, size=n_circuits)
+        else:
+            estimation_wires = [n_qubits]
         qpe_circuits = [
         transpile(
             QPE(range(est_wires), [est_wires]),

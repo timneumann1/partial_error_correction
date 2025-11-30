@@ -37,10 +37,10 @@ for n_qubit in range_qubits:
     benchmarking = TestCircuits(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)
     benchmarking_circuits = benchmarking.get_random_circuits(num_trials, n_qubits=n_qubit, depth=depth)
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     for circuit in benchmarking_circuits:
         transform_circuit(circuit)
-    end_time = time.time()
+    end_time = time.perf_counter()
     elapsed = end_time-start_time
     avg_time_per_circuit = elapsed/num_trials
     times_qubit.append(avg_time_per_circuit)
@@ -49,10 +49,10 @@ for depth in range_depths:
     n_qubit = 5
     benchmarking_circuits = benchmarking.get_random_circuits(num_trials, n_qubits=n_qubit, depth=depth)
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     for circuit in benchmarking_circuits:
         transform_circuit(circuit)
-    end_time = time.time()
+    end_time = time.perf_counter()
     elapsed = end_time-start_time
     avg_time_per_circuit = elapsed/num_trials
     times_depth.append(avg_time_per_circuit)

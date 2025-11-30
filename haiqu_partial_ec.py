@@ -134,7 +134,7 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'qpe' # 'random', 'qft' or 'qft'
+    test_circuit_type = 'qft' # 'random', 'qft' or 'qft'
     n_circuits = 10 # number of test circuits
 
     noise_model = build_noise_model(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)

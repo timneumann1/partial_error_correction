@@ -50,7 +50,7 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
         best_node_index = -1
         best_score = -1
         current_scores = scores.copy()
-        for i, node in enumerate(layer_dag.op_nodes()):
+        for j, node in enumerate(layer_dag.op_nodes()):
             if getattr(node.op, "name") in ALLOWED_BASE_GATES:
                 score_node = 2.5*len(node.qargs)
                 for qubit in node.qargs:
@@ -60,7 +60,7 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
 
                 if score_node > best_score:
                     best_score = score_node
-                    best_node_index = i       
+                    best_node_index = j       
         gates.append(best_node_index)
         
         scores -= 2/3*current_scores
@@ -139,8 +139,9 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'qft' # 'random', 'qft' or 'qft'
+    test_circuit_type = 'qpe' # 'random', 'qft' or 'qft'
     n_circuits = 10 # number of test circuits
+    n_qubits = 12
 
     ################################################
     # 1. Initialize noise model and simulator      #
@@ -157,11 +158,11 @@ if __name__ == '__main__':
 
     benchmarking = TestCircuits(p_1q=p_1q, p_2q=p_2q, ft_scale=ft_scale)
     if test_circuit_type == 'qft':
-        benchmarking_circuits = benchmarking.get_qft_circuits(n_circuits)
+        benchmarking_circuits = benchmarking.get_qft_circuits(n_circuits, n_qubits=n_qubits)
     elif test_circuit_type == 'random':
-        benchmarking_circuits = benchmarking.get_random_circuits(n_circuits)
+        benchmarking_circuits = benchmarking.get_random_circuits(n_circuits, n_qubits=n_qubits)
     elif test_circuit_type == 'qpe':
-        benchmarking_circuits = benchmarking.get_qpe_circuits(n_circuits)
+        benchmarking_circuits = benchmarking.get_qpe_circuits(n_circuits, n_qubits=n_qubits)
     
     ########################################################################
     # 2. Transform the first test circuit and visualize the result         #

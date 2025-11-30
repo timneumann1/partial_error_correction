@@ -65,7 +65,6 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
         gates.append(best_node_index)
         
         scores -= 2/3*current_scores
-        #print(f"New scores reduced:{scores}")          
 
     gates.reverse()
     for j, layer in enumerate(dag.layers()):
@@ -179,7 +178,7 @@ if __name__ == '__main__':
     viz_ft_f_base = filter_counts(viz_ft_baseline_result, THRESH)
 
     fig3 = plot_histogram([viz_ideal_f, viz_ft_f, viz_ft_f_base],
-               legend=["Original", "Transformed", "Transformation Baseline"],
+               legend=["Original", "Lookahead", "Transformation Baseline"],
                title="Comparison of Partial QEC with Ideal Simulation Results")
     
     fig3.savefig("histogram.png", dpi=300)

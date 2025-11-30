@@ -23,8 +23,8 @@ class TestCircuits:
         self.noisy_sim = AerSimulator(noise_model=self.noise_model)    
     
     def get_random_circuits(self, n_circuits):
-        random_qubits = np.random.randint(3, 5, size=n_circuits)
-        random_depths = np.random.randint(3, 6, size=n_circuits)
+        random_qubits = np.random.randint(3, 7, size=n_circuits)
+        random_depths = np.random.randint(3, 10, size=n_circuits)
         random_circuits = [
         transpile(
             random_circuit(num_qubits=nq, depth=nd, max_operands=2, seed=seed, measure=True),
@@ -43,7 +43,7 @@ class TestCircuits:
             qc.compose(QFT(num_qubits=nq), inplace=True)
             return qc
             
-        random_qubits = np.random.randint(7, 11, size=n_circuits)
+        random_qubits = np.random.randint(3, 7, size=n_circuits)
 
         qft_circuits = [
         transpile(
@@ -128,13 +128,13 @@ class TestCircuits:
                 
                 return qc
 
-            # Quantum Phase Estimation (QPE) circuit for T operator
-            T = np.array([[1, 0],
-                        [0, np.exp(1j*np.pi/4)]]) 
+            # Quantum Phase Estimation (QPE) circuit for Z rotation operator
+            Z = np.array([[1, 0],
+                        [0, np.exp(2j*np.pi/8)]]) 
         
-            return qpe(T, estimation_wires, target_wires)
+            return qpe(Z, estimation_wires, target_wires)
         
-        estimation_wires = np.random.randint(4, 8, size=n_circuits)
+        estimation_wires = np.random.randint(3, 5, size=n_circuits)
         qpe_circuits = [
         transpile(
             QPE(range(est_wires), [est_wires]),

@@ -139,7 +139,7 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'qpe' # 'random', 'qft' or 'qft'
+    test_circuit_type = 'qft' # 'random', 'qft' or 'qft'
     n_circuits = 10 # number of test circuits
 
     ################################################

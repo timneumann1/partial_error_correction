@@ -85,6 +85,75 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     transformed.name = circ.name + "_ft"
     return transformed
 
+def transform_circuit_forward(circ: QuantumCircuit) -> QuantumCircuit:
+    """
+    Designed transformation pass that:
+
+      - Preserves the circuit structure (same ops, same order, same wires),
+      - Selects at most one gate per DAG layer to mark as FT,
+      - Replaces only those gates by FT-labelled versions via to_ft_instruction.
+
+    Implementation strategy:
+      1. Build DAG from the original circuit.
+      2. Build a mapping from node_id -> original DAG node.
+      3. Iterate over DAG layers and, per layer, pick at most one candidate node
+         whose op.name is in ALLOWED_BASE_GATES.
+      4. For each chosen node_id, look up the original node and replace node.op
+         with the FT version.
+      5. Convert the modified DAG back to a QuantumCircuit.
+
+    """
+    dag = circuit_to_dag(circ)
+    new_dag = dag.copy_empty_like()   
+
+    layers = list(dag.layers())
+    num_qubits = dag.num_qubits()
+    scores = np.zeros(num_qubits)
+    gates = []
+
+    # For each layer, select the gate with the maximum influence in future computations
+    for i, layer in enumerate(layers): # follow reversed order
+        layer_dag = layer['graph']
+        best_node_index = -1
+        best_score = -1
+        current_scores = scores.copy()
+        for j, node in enumerate(layer_dag.op_nodes()):
+            if getattr(node.op, "name") in ALLOWED_BASE_GATES:
+                score_node = len(node.qargs)
+                for qubit in node.qargs:
+                    score_node += scores[qubit._index]
+                for qubit in node.qargs:
+                    scores[qubit._index] = score_node
+
+                if score_node > best_score:
+                    best_score = score_node
+                    best_node_index = j       
+        gates.append(best_node_index)
+        
+        scores -= 2/3*current_scores
+
+    #gates.reverse()
+
+    # Make the estimated most influencial gates fault-tolerant
+    for j, layer in enumerate(dag.layers()):
+        layer_dag = layer["graph"]
+
+        if gates[j]!=-1:            
+            for i, node in enumerate(layer_dag.op_nodes()):
+                if getattr(node.op, "name") in ALLOWED_BASE_GATES and i==gates[j]:
+                    layer_dag.substitute_node(
+                        node,
+                        to_ft_instruction(node.op)
+                    )
+                    break  # Only one per layer
+        new_dag.compose(layer_dag, inplace=True)
+        
+        
+    # 3) Convert back to a QuantumCircuit
+    transformed = dag_to_circuit(new_dag)
+    transformed.name = circ.name + "_ft"
+    return transformed
+
 
 def baseline_transform(circ: QuantumCircuit) -> QuantumCircuit:
     """
@@ -137,7 +206,7 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'qpe' # 'random', 'qft' or 'qft'
+    test_circuit_type = 'random' # 'random', 'qft' or 'qft'
     n_circuits = 10 # number of test circuits
     n_qubits = None
 
@@ -237,6 +306,16 @@ if __name__ == '__main__':
     print("\nRunning grader for our custom circuit transform...")
     grade = grader(
         transform_circuit_fn=transform_circuit,
+        circuits=benchmarking_circuits,
+        noise_model=noise_model,
+        shots=200_000,   # reduce for demo speed
+    )
+    print_results(grade, verbose=False)
+
+    # Grade our custom circuit transformation (forward direction)
+    print("\nRunning grader for our custom circuit transform (forward)...")
+    grade = grader(
+        transform_circuit_fn=transform_circuit_forward,
         circuits=benchmarking_circuits,
         noise_model=noise_model,
         shots=200_000,   # reduce for demo speed

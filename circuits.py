@@ -24,7 +24,25 @@ class TestCircuits:
         self.noisy_sim = AerSimulator(noise_model=self.noise_model)    
     
     def get_random_circuits(self, n_circuits, n_qubits=None, depth=None):
-        ''' Returns a list of Random Circuits'''
+        """
+        Generate a list of transpiled random QuantumCircuit objects.
+
+        Parameters
+        ----------
+        n_circuits : int
+            Number of random circuits to generate.
+        n_qubits : int or None, optional
+            If provided, use this fixed number of qubits for all circuits.
+            If None (default), a random integer in [3, 6] is chosen for each circuit.
+        depth : int or None, optional
+            If provided, use this fixed depth for all circuits.
+            If None (default), a random integer in [3, 9] is chosen for each circuit.
+
+        Returns
+        -------
+        list[qiskit.circuit.QuantumCircuit]
+            A list of circuits transpiled for self.noisy_sim with optimization_level=0.
+        """
         if n_qubits is None:
             random_qubits = np.random.randint(3, 7, size=n_circuits)
         else:
@@ -45,7 +63,23 @@ class TestCircuits:
         return random_circuits 
     
     def get_qft_circuits(self, n_circuits, n_qubits=None):
-        ''' Returns a list of QFT Circuits'''
+        """
+        Generate a list of Quantum Fourier Transform (QFT) circuits transpiled for the noisy simulator.
+
+        Parameters
+        ----------
+        n_circuits : int
+            Number of QFT circuits to produce.
+        n_qubits : int or None, optional
+            If provided, all circuits will use this fixed number of qubits.
+            If None (default), a random integer in [3, 6] is chosen for each circuit.
+
+        Returns
+        -------
+        list[qiskit.circuit.QuantumCircuit]
+            A list of QFT circuits (each preceded by Hadamards in this implementation)
+            transpiled for self.noisy_sim with optimization_level=0.
+        """
         def qft(nq):
             qc = QuantumCircuit(nq)
             qc.h(range(nq))
@@ -69,7 +103,25 @@ class TestCircuits:
         return qft_circuits
     
     def get_qpe_circuits(self, n_circuits, n_qubits=None):    
-        ''' Returns a list of QPE Circuits'''
+        """
+        Generate a list of Quantum Phase Estimation (QPE) circuits transpiled for the noisy simulator.
+
+        Parameters
+        ----------
+        n_circuits : int
+            Number of QPE circuits to generate.
+        n_qubits : int or None, optional
+            If provided, use this fixed number of estimation qubits for all circuits.
+            If None (default), a random integer in [5, 6] is chosen for each circuit.
+
+        Returns
+        -------
+        list[qiskit.circuit.QuantumCircuit]
+            A list of QPE circuits implementing phase estimation for a single-qubit
+            Z-rotation unitary. Each circuit contains an estimation register followed
+            by a single target qubit and measurements on the estimation register.
+            Circuits are transpiled for self.noisy_sim with optimization_level=0.
+        """
         
         def QPE(estimation_wires, target_wires):
 

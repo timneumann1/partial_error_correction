@@ -24,7 +24,7 @@ class TestCircuits:
         self.noisy_sim = AerSimulator(noise_model=self.noise_model)    
     
     def get_random_circuits(self, n_circuits, n_qubits=None, depth=None):
-
+        ''' Returns a list of Random Circuits'''
         if n_qubits is None:
             random_qubits = np.random.randint(3, 7, size=n_circuits)
         else:
@@ -45,7 +45,7 @@ class TestCircuits:
         return random_circuits 
     
     def get_qft_circuits(self, n_circuits, n_qubits=None):
-        
+        ''' Returns a list of QFT Circuits'''
         def qft(nq):
             qc = QuantumCircuit(nq)
             qc.h(range(nq))
@@ -68,8 +68,9 @@ class TestCircuits:
         
         return qft_circuits
     
-    def get_qpe_circuits(self, n_circuits, n_qubits=None):
-            
+    def get_qpe_circuits(self, n_circuits, n_qubits=None):    
+        ''' Returns a list of QPE Circuits'''
+        
         def QPE(estimation_wires, target_wires):
 
             # Helper functions for Quantum Phase Estimation (QPE) circuit
@@ -147,7 +148,7 @@ class TestCircuits:
             return qpe(Z, estimation_wires, target_wires)
         
         if n_qubits is None:
-            estimation_wires = np.random.randint(3, 5, size=n_circuits)
+            estimation_wires = np.random.randint(5, 7, size=n_circuits)
         else:
             estimation_wires = [n_qubits]
         qpe_circuits = [

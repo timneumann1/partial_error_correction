@@ -137,7 +137,7 @@ if __name__ == '__main__':
     p_1q = 1e-2   # depolarizing error for 1-qubit native gates
     p_2q = 5e-2   # depolarizing error for 2-qubit native gates
     ft_scale = 0.1 # ideal FT gates
-    test_circuit_type = 'random' # 'random', 'qft' or 'qft'
+    test_circuit_type = 'qpe' # 'random', 'qft' or 'qft'
     n_circuits = 10 # number of test circuits
     n_qubits = None
 
@@ -170,20 +170,23 @@ if __name__ == '__main__':
     viz_circuit_ft = transform_circuit(viz_circuit)
     viz_circuit_ft_baseline = baseline_transform((viz_circuit))
     
-    viz_circuit.measure_all()
+    if test_circuit_type != 'qpe':
+        viz_circuit.measure_all()
     viz_ideal_result = ideal_sim.run(viz_circuit, shots=10000).result().get_counts()
     fig = viz_circuit.draw(output="mpl")
-    fig.savefig("circuit.png", dpi=300, bbox_inches="tight")
+    fig.savefig("plots/circuit.png", dpi=300, bbox_inches="tight")
     
-    viz_circuit_ft.measure_all()
+    if test_circuit_type != 'qpe':
+        viz_circuit_ft.measure_all()
     viz_ft_result = noisy_sim.run(transpile(viz_circuit_ft, noisy_sim, optimization_level=0), shots=10000).result().get_counts()
     fig2 = viz_circuit_ft.draw(output="mpl")
-    fig2.savefig("circuit_ft.png", dpi=300, bbox_inches="tight")
+    fig2.savefig("plots/circuit_ft.png", dpi=300, bbox_inches="tight")
     
-    viz_circuit_ft_baseline.measure_all()
+    if test_circuit_type != 'qpe':
+        viz_circuit_ft_baseline.measure_all()
     viz_ft_baseline_result = noisy_sim.run(transpile(viz_circuit_ft_baseline, noisy_sim, optimization_level=0), shots=10000).result().get_counts()
     fig3 = viz_circuit_ft_baseline.draw(output="mpl")
-    fig3.savefig("circuit_ft_baseline.png", dpi=300, bbox_inches="tight")
+    fig3.savefig("plots/circuit_ft_baseline.png", dpi=300, bbox_inches="tight")
     
     ############################################################################
     # Compare the measured histogram of the ideal circuit with the partial     #
@@ -202,7 +205,7 @@ if __name__ == '__main__':
                legend=["Original", "Lookahead", "Transformation Baseline"],
                title="Comparison of Partial QEC with Ideal Simulation Results", bar_labels = False)
     
-    fig3.savefig("histogram.png", dpi=300)
+    fig3.savefig("plots/histogram.png", dpi=300)
       
     ############################################################################
     # Evaluate our partial fault-tolerant circuit transformation with the      #
@@ -231,7 +234,7 @@ if __name__ == '__main__':
         noise_model=noise_model,
         shots=200_000,   # reduce for demo speed
     )
-    print_results(grade, verbose=False)
+    print_results(grade, verbose=True)
       
     # Grade our custom circuit transformation  
     print("\nRunning grader for our custom circuit transform...")
@@ -241,7 +244,7 @@ if __name__ == '__main__':
         noise_model=noise_model,
         shots=200_000,   # reduce for demo speed
     )
-    print_results(grade, verbose=False)
+    print_results(grade, verbose=True)
 
     print("")
     

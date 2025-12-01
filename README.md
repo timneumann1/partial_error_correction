@@ -3,6 +3,9 @@
 ## Overview
 This repository contains code and resources for the Haiqu Challenge at the PushQuantum Hackathon 2025. The challenge explores partial fault tolerance in quantum circuits, where only one gate per layer can be executed in a fault-tolerant (FT) manner. The goal is to maximize circuit fidelity under noise by strategically choosing which gates to protect.
 
+## Hackathon Team
+The Hackathon team consisted of César Hernando, Arturo Castano, Vittorio Macripo and Tim Neumann.
+
 ## Challenge Description
 Quantum circuits are inherently noisy. Full quantum error correction is not yet practical, so this challenge focuses on early fault-tolerant quantum computing (EFTQC) with partial QEC. You will implement a transformation pass that marks selected gates as FT placeholders, following strict constraints:
 - Only one FT gate per layer (DAG slice)
@@ -26,7 +29,7 @@ Quantum circuits are inherently noisy. Full quantum error correction is not yet 
     pip install requirements.txt
     ```
 2. **Run the notebook**: Open `haiqu_challenge_pushquantum_2025.ipynb` for a guided introduction and demo.
-3. **Run the main script**: Execute `haiqu_partial_ec.py` to test your transformation and see grading results.
+3. **Run the main script**: Execute `partial_error_correction.py` to test your transformation and see grading results.
 4. **Benchmark scalability**: Use `test_scalability.py` to evaluate runtime as a function of qubits and circuit depth.
 
 ## Key Functions

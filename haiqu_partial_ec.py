@@ -68,10 +68,12 @@ def transform_circuit(circ: QuantumCircuit) -> QuantumCircuit:
     # Make the estimated most influencial gates fault-tolerant
     for j, layer in enumerate(dag.layers()):
         layer_dag = layer["graph"]
-
+        # To test protecting the last qubit, uncomment the next two lines and replace i == gates[j] below with i == size-1
+        # nodes = list(layer_dag.op_nodes())
+        # size = len(nodes)
         if gates[j]!=-1:            
             for i, node in enumerate(layer_dag.op_nodes()):
-                if getattr(node.op, "name") in ALLOWED_BASE_GATES and i==gates[j]:
+                if getattr(node.op, "name") in ALLOWED_BASE_GATES and i == gates[j]: #i==size-1:
                     layer_dag.substitute_node(
                         node,
                         to_ft_instruction(node.op)

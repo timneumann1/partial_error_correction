@@ -21,6 +21,10 @@ Quantum circuits are inherently noisy. Full quantum error correction is not yet 
 	```bash
 	pip install qiskit==2.2.3 qiskit-aer==0.17.2 numpy matplotlib
 	```
+    or install all dependencies directly with 
+    ```bash
+    pip install requirements.txt
+    ```
 2. **Run the notebook**: Open `haiqu_challenge_pushquantum_2025.ipynb` for a guided introduction and demo.
 3. **Run the main script**: Execute `haiqu_partial_ec.py` to test your transformation and see grading results.
 4. **Benchmark scalability**: Use `test_scalability.py` to evaluate runtime as a function of qubits and circuit depth.

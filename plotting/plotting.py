@@ -96,4 +96,4 @@ axes[1,2].set_ylabel("Mean Δ Fidelity")
 
 fig.suptitle("Comparison of Baseline vs Lookahead\nRandom Circuits and QFT", fontsize=16)
 plt.tight_layout()
-plt.show()
+plt.savefig("plots/fidelity_comparison.png", dpi=300)
